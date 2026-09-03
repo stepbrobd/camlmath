@@ -15,8 +15,7 @@
 (package
  (name camlmath)
  (synopsis "TeX math to MathML Core converter")
- (description
-  "Converts a subset of TeX math to MathML Core markup. Emits no MathJax-era attributes, escapes by construction, and rejects anything outside the supported subset instead of degrading.")
+ (description "Converts a subset of TeX math to MathML Core markup.")
  (tags
   (tex latex math mathml markup))
  (depends

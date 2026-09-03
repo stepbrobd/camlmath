@@ -2,8 +2,7 @@
 opam-version: "2.0"
 version: "2026.903.0"
 synopsis: "TeX math to MathML Core converter"
-description:
-  "Converts a subset of TeX math to MathML Core markup. Emits no MathJax-era attributes, escapes by construction, and rejects anything outside the supported subset instead of degrading."
+description: "Converts a subset of TeX math to MathML Core markup."
 maintainer: ["Yifei Sun <ysun@hey.com>"]
 authors: ["Yifei Sun <ysun@hey.com>"]
 license: "MIT"
