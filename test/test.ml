@@ -1,0 +1,259 @@
+open Camlmath
+
+(* the five display blocks in pages/srd.md on ysun.co, the corpus this subset
+   was sized for *)
+let srd =
+  [ ( "goroutine creation"
+    , "\\frac{}{(G, M, C) \\xrightarrow{\\texttt{go f()}} (G \\cup \\{\\texttt{f()}\\}, \
+       M, C)}" )
+  ; ( "memory modification"
+    , "\\frac{\\texttt{f()}\\ \\text{is}\\ \\texttt{data++}}{(G, M, C) \
+       \\xrightarrow{\\texttt{go f()}} (G - \\{\\texttt{f()}\\}, M[\\texttt{data} \
+       \\rightarrow M(\\texttt{data}) + 1], C)}" )
+  ; ( "channel send"
+    , "\\frac{\\texttt{f()}\\ \\text{is}\\ \\texttt{done <- true}}{(G, M, C) \
+       \\xrightarrow{\\texttt{go f()}} (G - \\{\\texttt{f()}\\}, M, C[\\texttt{done} \
+       \\rightarrow C(\\texttt{done}) \\cup \\{\\texttt{true}\\}])}" )
+  ; ( "channel receive"
+    , "\\frac{\\texttt{f()}\\ \\text{is}\\ \\texttt{<-done}}{(G, M, C) \
+       \\xrightarrow{\\texttt{go f()}} (G - \\{\\texttt{f()}\\}, M, C[\\texttt{done} \
+       \\rightarrow C(\\texttt{done}) - \\{\\texttt{true}\\}])}" )
+  ; ( "print"
+    , "\\frac{\\texttt{f()}\\ \\text{is}\\ \\texttt{fmt.Println(data)}}{(G, M, C) \
+       \\xrightarrow{\\texttt{go f()}} (G \\cup \\{\\texttt{f()}\\}, M, C)}" )
+  ]
+;;
+
+let conv ?display src =
+  match to_mathml ?display src with
+  | Ok m -> m
+  | Error e -> Alcotest.failf "expected a conversion, got %a" pp_error e
+;;
+
+let err src =
+  match to_mathml src with
+  | Ok m -> Alcotest.failf "expected an error, got %s" m
+  | Error e -> Format.asprintf "%a" pp_error e
+;;
+
+let contains haystack needle =
+  let n = String.length needle in
+  let rec go i =
+    i + n <= String.length haystack
+    && (String.equal (String.sub haystack i n) needle || go (i + 1))
+  in
+  go 0
+;;
+
+(* a tag balance walk, enough to catch an unclosed or crossed element without
+   pulling in an xml parser *)
+let well_formed s =
+  let n = String.length s in
+  let stack = ref [] in
+  let i = ref 0 in
+  let ok = ref true in
+  while !ok && !i < n do
+    if s.[!i] <> '<'
+    then incr i
+    else (
+      let close = String.index_from s !i '>' in
+      let body = String.sub s (!i + 1) (close - !i - 1) in
+      let name buf =
+        match String.index_opt buf ' ' with
+        | Some k -> String.sub buf 0 k
+        | None -> buf
+      in
+      if String.length body > 0 && body.[0] = '/'
+      then (
+        let want = String.sub body 1 (String.length body - 1) in
+        match !stack with
+        | top :: rest when String.equal top want -> stack := rest
+        | _ -> ok := false)
+      else if String.length body > 0 && body.[String.length body - 1] = '/'
+      then ()
+      else stack := name body :: !stack;
+      i := close + 1)
+  done;
+  !ok && !stack = []
+;;
+
+let ascii_only s = String.for_all (fun c -> Char.code c < 0x80) s
+
+let test_srd_converts () =
+  List.iter
+    (fun (label, src) ->
+       ignore (conv src : string);
+       ignore label)
+    srd
+;;
+
+let test_srd_well_formed () =
+  List.iter
+    (fun (label, src) -> Alcotest.(check bool) label true (well_formed (conv src)))
+    srd
+;;
+
+let test_srd_ascii () =
+  List.iter
+    (fun (label, src) -> Alcotest.(check bool) label true (ascii_only (conv src)))
+    srd
+;;
+
+(* mathml core keeps mathvariant only as "normal" on <mi>. a converter that
+   emits mathvariant="monospace" silently loses the face it asked for *)
+let test_no_mathvariant () =
+  List.iter
+    (fun (label, src) ->
+       Alcotest.(check bool) label false (contains (conv src) "mathvariant"))
+    srd
+;;
+
+(* mpadded can move ink outside the box its parent reserves, and webkit honours
+   that where blink clamps it *)
+let test_no_mpadded () =
+  List.iter
+    (fun (label, src) ->
+       Alcotest.(check bool) label false (contains (conv src) "mpadded"))
+    srd
+;;
+
+let test_texttt_escapes_lt () =
+  let m = conv "\\texttt{done <- true}" in
+  Alcotest.(check bool) "escaped" true (contains m "done&#xa0;&lt;-&#xa0;true");
+  Alcotest.(check bool) "well formed" true (well_formed m)
+;;
+
+let test_texttt_escapes_amp () =
+  Alcotest.(check bool)
+    "escaped"
+    true
+    (contains (conv "\\texttt{a & b}") "a&#xa0;&amp;&#xa0;b")
+;;
+
+let test_arrow_is_stretchy () =
+  Alcotest.(check bool)
+    "stretchy arrow"
+    true
+    (contains (conv "\\xrightarrow{\\texttt{go}}") "<mo stretchy=\"true\">&#x2192;</mo>")
+;;
+
+let test_empty_numerator () =
+  Alcotest.(check bool)
+    "empty mrow"
+    true
+    (contains (conv "\\frac{}{x}") "<mfrac><mrow />")
+;;
+
+let test_fences_do_not_stretch () =
+  Alcotest.(check bool)
+    "paren pinned"
+    true
+    (contains (conv "(x)") "<mo stretchy=\"false\">(</mo>")
+;;
+
+let test_minus_is_the_sign () =
+  Alcotest.(check bool) "u+2212" true (contains (conv "a - b") "&#x2212;")
+;;
+
+let test_number_runs () =
+  Alcotest.(check bool) "integer" true (contains (conv "123") "<mn>123</mn>");
+  Alcotest.(check bool) "decimal" true (contains (conv "1.5") "<mn>1.5</mn>");
+  Alcotest.(check bool)
+    "trailing dot stays an operator"
+    true
+    (contains (conv "1.") "<mo>.</mo>")
+;;
+
+let test_scripts () =
+  Alcotest.(check bool) "sub then sup" true (contains (conv "x_i^2") "<msubsup>");
+  Alcotest.(check bool) "sup then sub" true (contains (conv "x^2_i") "<msubsup>");
+  Alcotest.(check bool) "sub alone" true (contains (conv "x_i") "<msub>");
+  Alcotest.(check bool) "sup alone" true (contains (conv "x^2") "<msup>")
+;;
+
+let test_display_modes () =
+  Alcotest.(check bool) "block" true (contains (conv "x") "display=\"block\"");
+  Alcotest.(check bool)
+    "inline"
+    false
+    (contains (conv ~display:Inline "x") "display=\"block\"")
+;;
+
+let test_unknown_command_is_loud () =
+  Alcotest.(check string) "reported" "unknown_command(\\sqrt at 0)" (err "\\sqrt{2}")
+;;
+
+let test_unknown_command_in_text_is_loud () =
+  Alcotest.(check string) "reported" "unknown_command(\\foo at 8)" (err "\\texttt{\\foo}")
+;;
+
+let test_missing_argument_is_loud () =
+  Alcotest.(check string) "reported" "missing_argument(\\frac at 0)" (err "\\frac{1}")
+;;
+
+let test_unclosed_group_is_loud () =
+  Alcotest.(check string) "reported" "unclosed_group(opened at 0)" (err "{1 + 2")
+;;
+
+let test_stray_brace_is_loud () =
+  Alcotest.(check string) "reported" "unexpected_token(} at 1)" (err "x}")
+;;
+
+let test_invalid_utf8_is_loud () =
+  Alcotest.(check string) "reported" "invalid_utf8(at 1)" (err "x\xffy")
+;;
+
+let test_commands_are_listed () =
+  Alcotest.(check bool) "frac listed" true (List.mem "frac" Parser.commands);
+  Alcotest.(check bool) "sqrt absent" false (List.mem "sqrt" Parser.commands)
+;;
+
+let test_exn_entry_point () =
+  let raised =
+    try
+      ignore (to_mathml_exn "\\sqrt{2}" : string);
+      false
+    with
+    | Camlmath_error (Unknown_command ("sqrt", 0)) -> true
+    | _ -> false
+  in
+  Alcotest.(check bool) "raises" true raised
+;;
+
+let case name f = Alcotest.test_case name `Quick f
+
+let () =
+  Alcotest.run
+    "camlmath"
+    [ ( "srd corpus"
+      , [ case "converts" test_srd_converts
+        ; case "well formed" test_srd_well_formed
+        ; case "ascii only" test_srd_ascii
+        ; case "no mathvariant" test_no_mathvariant
+        ; case "no mpadded" test_no_mpadded
+        ] )
+    ; ( "emitter"
+      , [ case "escapes < in text" test_texttt_escapes_lt
+        ; case "escapes & in text" test_texttt_escapes_amp
+        ; case "arrow stretches" test_arrow_is_stretchy
+        ; case "empty numerator" test_empty_numerator
+        ; case "fences pinned" test_fences_do_not_stretch
+        ; case "minus sign" test_minus_is_the_sign
+        ; case "display modes" test_display_modes
+        ] )
+    ; ( "parser"
+      , [ case "number runs" test_number_runs
+        ; case "scripts" test_scripts
+        ; case "command list" test_commands_are_listed
+        ] )
+    ; ( "failures"
+      , [ case "unknown command" test_unknown_command_is_loud
+        ; case "unknown command in text" test_unknown_command_in_text_is_loud
+        ; case "missing argument" test_missing_argument_is_loud
+        ; case "unclosed group" test_unclosed_group_is_loud
+        ; case "stray brace" test_stray_brace_is_loud
+        ; case "invalid utf-8" test_invalid_utf8_is_loud
+        ; case "exception entry point" test_exn_entry_point
+        ] )
+    ]
+;;
