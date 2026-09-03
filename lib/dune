@@ -1,0 +1,6 @@
+(library
+ (name camlmath)
+ (public_name camlmath)
+ (wrapped true)
+ (instrumentation
+  (backend bisect_ppx)))
