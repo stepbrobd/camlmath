@@ -16,6 +16,10 @@ type font =
     converts whole or reports where it stopped. *)
 type error =
   | Invalid_utf8 of int (** The source is not well formed UTF-8. *)
+  | Invalid_char of int
+  (** A code point XML cannot carry, as a literal or as a reference. XML's
+        [Char] production is narrower than "valid UTF-8": it excludes most C0
+        controls and the noncharacters U+FFFE and U+FFFF. *)
   | Unknown_command of string * int
   (** A control sequence outside the supported subset. The string omits the
         leading backslash. *)
@@ -28,5 +32,7 @@ type error =
 (** Raised by the [_exn] entry points in place of returning an error. *)
 exception Camlmath_error of error
 
-(** [pp_error] prints an error for diagnostics. The wording is not stable. *)
+(** [pp_error] prints an error. The rendering is part of the interface, because
+    a consumer converting at build time puts it in front of whoever wrote the
+    expression. *)
 val pp_error : Format.formatter -> error -> unit

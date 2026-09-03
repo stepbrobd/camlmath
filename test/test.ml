@@ -203,6 +203,20 @@ let test_invalid_utf8_is_loud () =
   Alcotest.(check string) "reported" "invalid_utf8(at 1)" (err "x\xffy")
 ;;
 
+(* xml's Char production is narrower than valid utf-8. these reach the emitter
+   through text mode, the one path that copies source bytes into the output *)
+let test_control_char_is_loud () =
+  Alcotest.(check string) "form feed" "invalid_char(at 7)" (err "\\text{a\012b}")
+;;
+
+let test_noncharacter_is_loud () =
+  Alcotest.(check string) "u+ffff" "invalid_char(at 7)" (err "\\text{a\239\191\191b}")
+;;
+
+let test_tab_and_newline_are_fine () =
+  Alcotest.(check bool) "tab survives" true (contains (conv "\\text{a\tb}") "<mtext>")
+;;
+
 let test_commands_are_listed () =
   Alcotest.(check bool) "frac listed" true (List.mem "frac" Parser.commands);
   Alcotest.(check bool) "sqrt absent" false (List.mem "sqrt" Parser.commands)
@@ -253,6 +267,9 @@ let () =
         ; case "unclosed group" test_unclosed_group_is_loud
         ; case "stray brace" test_stray_brace_is_loud
         ; case "invalid utf-8" test_invalid_utf8_is_loud
+        ; case "control character" test_control_char_is_loud
+        ; case "noncharacter" test_noncharacter_is_loud
+        ; case "tab and newline pass" test_tab_and_newline_are_fine
         ; case "exception entry point" test_exn_entry_point
         ] )
     ]

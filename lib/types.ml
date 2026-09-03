@@ -8,6 +8,7 @@ type font =
 
 type error =
   | Invalid_utf8 of int
+  | Invalid_char of int
   | Unknown_command of string * int
   | Unexpected_char of char * int
   | Unexpected_token of string * int
@@ -18,6 +19,7 @@ exception Camlmath_error of error
 
 let pp_error fmt = function
   | Invalid_utf8 at -> Format.fprintf fmt "invalid_utf8(at %d)" at
+  | Invalid_char at -> Format.fprintf fmt "invalid_char(at %d)" at
   | Unknown_command (name, at) -> Format.fprintf fmt "unknown_command(\\%s at %d)" name at
   | Unexpected_char (c, at) -> Format.fprintf fmt "unexpected_char(%C at %d)" c at
   | Unexpected_token (tok, at) -> Format.fprintf fmt "unexpected_token(%s at %d)" tok at
