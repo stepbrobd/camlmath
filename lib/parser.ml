@@ -24,8 +24,11 @@ let symbols =
   ; "cdot", Mo ("\u{22c5}", Default)
   ; "pm", Mo ("\u{00b1}", Default)
   ; "leq", Mo ("\u{2264}", Default)
+  ; "le", Mo ("\u{2264}", Default)
   ; "geq", Mo ("\u{2265}", Default)
+  ; "ge", Mo ("\u{2265}", Default)
   ; "neq", Mo ("\u{2260}", Default)
+  ; "ne", Mo ("\u{2260}", Default)
   ; "equiv", Mo ("\u{2261}", Default)
   ; "approx", Mo ("\u{2248}", Default)
   ; "land", Mo ("\u{2227}", Default)
@@ -37,32 +40,61 @@ let symbols =
   ; "models", Mo ("\u{22a8}", Default)
   ; "ldots", Mo ("\u{2026}", Default)
   ; "cdots", Mo ("\u{22ef}", Default)
-  ; "infty", Mi "\u{221e}"
-  ; "alpha", Mi "\u{03b1}"
-  ; "beta", Mi "\u{03b2}"
-  ; "gamma", Mi "\u{03b3}"
-  ; "delta", Mi "\u{03b4}"
-  ; "epsilon", Mi "\u{03b5}"
-  ; "lambda", Mi "\u{03bb}"
-  ; "mu", Mi "\u{03bc}"
-  ; "pi", Mi "\u{03c0}"
-  ; "rho", Mi "\u{03c1}"
-  ; "sigma", Mi "\u{03c3}"
-  ; "tau", Mi "\u{03c4}"
-  ; "phi", Mi "\u{03c6}"
-  ; "psi", Mi "\u{03c8}"
-  ; "omega", Mi "\u{03c9}"
-  ; "Gamma", Mi "\u{0393}"
-  ; "Delta", Mi "\u{0394}"
-  ; "Lambda", Mi "\u{039b}"
-  ; "Sigma", Mi "\u{03a3}"
-  ; "Phi", Mi "\u{03a6}"
-  ; "Omega", Mi "\u{03a9}"
-    (* a brace reaches math mode escaped. it is a fence, so it must not stretch
-       to a tall sibling any more than a parenthesis does *)
+  ; "infty", Mi ("\u{221e}", Italic)
+    (* lowercase greek is italic in tex, which is also what math-auto gives a
+       single character, so these carry no variant *)
+  ; "alpha", Mi ("\u{03b1}", Italic)
+  ; "beta", Mi ("\u{03b2}", Italic)
+  ; "gamma", Mi ("\u{03b3}", Italic)
+  ; "delta", Mi ("\u{03b4}", Italic)
+  ; "epsilon", Mi ("\u{03f5}", Italic)
+  ; "varepsilon", Mi ("\u{03b5}", Italic)
+  ; "zeta", Mi ("\u{03b6}", Italic)
+  ; "eta", Mi ("\u{03b7}", Italic)
+  ; "theta", Mi ("\u{03b8}", Italic)
+  ; "vartheta", Mi ("\u{03d1}", Italic)
+  ; "iota", Mi ("\u{03b9}", Italic)
+  ; "kappa", Mi ("\u{03ba}", Italic)
+  ; "lambda", Mi ("\u{03bb}", Italic)
+  ; "mu", Mi ("\u{03bc}", Italic)
+  ; "nu", Mi ("\u{03bd}", Italic)
+  ; "xi", Mi ("\u{03be}", Italic)
+  ; "pi", Mi ("\u{03c0}", Italic)
+  ; "rho", Mi ("\u{03c1}", Italic)
+  ; "sigma", Mi ("\u{03c3}", Italic)
+  ; "tau", Mi ("\u{03c4}", Italic)
+  ; "upsilon", Mi ("\u{03c5}", Italic)
+  ; "phi", Mi ("\u{03d5}", Italic)
+  ; "varphi", Mi ("\u{03c6}", Italic)
+  ; "chi", Mi ("\u{03c7}", Italic)
+  ; "psi", Mi ("\u{03c8}", Italic)
+  ; "omega", Mi ("\u{03c9}", Italic)
+    (* tex sets uppercase greek upright. math-auto would italicize it, and
+       mathvariant="normal" is the one spelling mathml core kept to say no *)
+  ; "Gamma", Mi ("\u{0393}", Upright)
+  ; "Delta", Mi ("\u{0394}", Upright)
+  ; "Theta", Mi ("\u{0398}", Upright)
+  ; "Lambda", Mi ("\u{039b}", Upright)
+  ; "Xi", Mi ("\u{039e}", Upright)
+  ; "Pi", Mi ("\u{03a0}", Upright)
+  ; "Sigma", Mi ("\u{03a3}", Upright)
+  ; "Upsilon", Mi ("\u{03a5}", Upright)
+  ; "Phi", Mi ("\u{03a6}", Upright)
+  ; "Psi", Mi ("\u{03a8}", Upright)
+  ; "Omega", Mi ("\u{03a9}", Upright)
+    (* a fence reaching math mode escaped must not stretch to a tall sibling any
+       more than a parenthesis does. \| is \Vert, not a single bar *)
   ; "{", Mo ("{", Fixed)
   ; "}", Mo ("}", Fixed)
-  ; "|", Mo ("|", Fixed)
+  ; "vert", Mo ("|", Fixed)
+  ; "|", Mo ("\u{2016}", Fixed)
+  ; "Vert", Mo ("\u{2016}", Fixed)
+    (* the characters tex reserves, reachable in math mode only escaped *)
+  ; "%", Mo ("%", Default)
+  ; "&", Mo ("&", Default)
+  ; "#", Mo ("#", Default)
+  ; "$", Mo ("$", Default)
+  ; "_", Mo ("_", Default)
   ; ",", Mspace Thin
   ; ":", Mspace Medium
   ; ";", Mspace Thick
@@ -106,10 +138,10 @@ let char_atom lx c at =
   if is_digit c
   then Ok (number lx c)
   else if is_letter c
-  then Ok (Mi (String.make 1 c))
+  then Ok (Mi (String.make 1 c, Italic))
   else (
     match c with
-    | '(' | ')' | '[' | ']' -> Ok (Mo (String.make 1 c, Fixed))
+    | '(' | ')' | '[' | ']' | '|' -> Ok (Mo (String.make 1 c, Fixed))
     | '+' -> Ok (Mo ("+", Default))
     | '-' -> Ok (Mo ("\u{2212}", Default))
     | '*' -> Ok (Mo ("\u{2217}", Default))
@@ -177,7 +209,22 @@ and group lx ~cmd ~at =
     (match Lexer.next lx with
      | Lexer.Rbrace, _ -> Ok (row items)
      | _ -> Error (Unclosed_group opened))
-  | _ -> Error (Missing_argument (cmd, at))
+  | (Lexer.Eof | Lexer.Rbrace), _ -> Error (Missing_argument (cmd, at))
+  | _ -> single lx
+
+(* an unbraced argument is one token, so \frac12 is one half. a digit must not
+   pull in the digits after it the way an ordinary atom does *)
+and single lx =
+  let tok, at = Lexer.next lx in
+  match tok with
+  | Lexer.Char c when is_digit c -> Ok (Mn (String.make 1 c))
+  | Lexer.Char c -> char_atom lx c at
+  | Lexer.Command name -> command lx name at
+  | Lexer.Lbrace -> Error (Unexpected_token ("{", at))
+  | Lexer.Rbrace -> Error (Unexpected_token ("}", at))
+  | Lexer.Sub -> Error (Unexpected_token ("_", at))
+  | Lexer.Sup -> Error (Unexpected_token ("^", at))
+  | Lexer.Eof -> Error (Unexpected_token ("end of input", at))
 
 and command lx name at =
   match name with

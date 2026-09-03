@@ -217,6 +217,67 @@ let test_tab_and_newline_are_fine () =
   Alcotest.(check bool) "tab survives" true (contains (conv "\\text{a\tb}") "<mtext>")
 ;;
 
+let test_vertical_bars () =
+  Alcotest.(check bool)
+    "bare bar is a fence"
+    true
+    (contains (conv "|x|") "<mo stretchy=\"false\">|</mo>");
+  Alcotest.(check bool)
+    "backslash bar is Vert"
+    true
+    (contains (conv "\\|x\\|") "&#x2016;");
+  Alcotest.(check bool)
+    "vert is a single bar"
+    true
+    (contains (conv "\\vert") "<mo stretchy=\"false\">|</mo>")
+;;
+
+(* tex sets uppercase greek upright, and math-auto would italicize it *)
+let test_uppercase_greek_is_upright () =
+  Alcotest.(check bool)
+    "normal"
+    true
+    (contains (conv "\\Gamma") "<mi mathvariant=\"normal\">&#x393;</mi>");
+  Alcotest.(check bool)
+    "lowercase stays italic"
+    true
+    (contains (conv "\\gamma") "<mi>&#x3b3;</mi>")
+;;
+
+let test_epsilon_and_phi_glyphs () =
+  Alcotest.(check bool) "epsilon is lunate" true (contains (conv "\\epsilon") "&#x3f5;");
+  Alcotest.(check bool) "varepsilon" true (contains (conv "\\varepsilon") "&#x3b5;");
+  Alcotest.(check bool) "phi is the symbol form" true (contains (conv "\\phi") "&#x3d5;");
+  Alcotest.(check bool) "varphi" true (contains (conv "\\varphi") "&#x3c6;")
+;;
+
+(* an unbraced argument is one token, so the digit run must not swallow the
+   denominator *)
+let test_unbraced_argument () =
+  Alcotest.(check bool)
+    "one half"
+    true
+    (contains (conv "\\frac12") "<mfrac><mn>1</mn><mn>2</mn></mfrac>");
+  Alcotest.(check bool)
+    "braced still groups digits"
+    true
+    (contains (conv "\\frac{12}{3}") "<mfrac><mn>12</mn><mn>3</mn></mfrac>");
+  Alcotest.(check string)
+    "still loud when absent"
+    "missing_argument(\\frac at 0)"
+    (err "\\frac{1}")
+;;
+
+let test_aliases_and_escapes () =
+  Alcotest.(check bool) "le" true (contains (conv "a \\le b") "&#x2264;");
+  Alcotest.(check bool) "ne" true (contains (conv "a \\ne b") "&#x2260;");
+  Alcotest.(check bool) "percent" true (contains (conv "50\\%") "<mo>%</mo>");
+  Alcotest.(check bool)
+    "ampersand escaped"
+    true
+    (contains (conv "a \\& b") "<mo>&amp;</mo>")
+;;
+
 let test_commands_are_listed () =
   Alcotest.(check bool) "frac listed" true (List.mem "frac" Parser.commands);
   Alcotest.(check bool) "sqrt absent" false (List.mem "sqrt" Parser.commands)
@@ -259,6 +320,11 @@ let () =
       , [ case "number runs" test_number_runs
         ; case "scripts" test_scripts
         ; case "command list" test_commands_are_listed
+        ; case "vertical bars" test_vertical_bars
+        ; case "uppercase greek upright" test_uppercase_greek_is_upright
+        ; case "epsilon and phi" test_epsilon_and_phi_glyphs
+        ; case "unbraced argument" test_unbraced_argument
+        ; case "aliases and escapes" test_aliases_and_escapes
         ] )
     ; ( "failures"
       , [ case "unknown command" test_unknown_command_is_loud

@@ -53,7 +53,8 @@ let add_attr b name value =
 
 let rec add_node b node =
   match node with
-  | Mi s -> leaf b "mi" [] s
+  | Mi (s, Italic) -> leaf b "mi" [] s
+  | Mi (s, Upright) -> leaf b "mi" [ "mathvariant", "normal" ] s
   | Mn s -> leaf b "mn" [] s
   | Mo (s, Default) -> leaf b "mo" [] s
   | Mo (s, Stretchy) -> leaf b "mo" [ "stretchy", "true" ] s

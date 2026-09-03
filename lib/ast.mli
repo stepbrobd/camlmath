@@ -11,10 +11,11 @@
       outside the box its parent reserves, and WebKit honours that literally
       while Blink clamps it. Layout that needs padding uses {!Mspace}, which
       cannot express a negative metric.
-    - There is no [mathvariant]. MathML Core keeps it only as ["normal"] on
-      [<mi>], so a converter that emits [mathvariant="monospace"] loses the face
-      it asked for. A monospace run is a {!Mtext} carrying {!Types.Monospace},
-      which the emitter writes as a font family. *)
+    - The only [mathvariant] that exists is ["normal"] on [<mi>], which is the
+      only one MathML Core kept, spelled {!Upright}. A converter that emits
+      [mathvariant="monospace"] loses the face it asked for, so a monospace run
+      is a {!Mtext} carrying {!Types.Monospace} and the emitter writes it as a
+      font family. *)
 
 (** A fixed horizontal space. The widths are the TeX math spacing units, and
     none of them can be negative. *)
@@ -34,11 +35,19 @@ type stretch =
   (** Forbid stretching. A fence beside a tall sibling, such as a parenthesis
         next to a fraction, would otherwise grow to match it. *)
 
+(** Whether a single-character identifier takes the automatic italic that
+    MathML Core applies through [text-transform: math-auto]. *)
+type variant =
+  | Italic (** The default, and what TeX gives a variable. *)
+  | Upright
+  (** [mathvariant="normal"]. Needed for the uppercase Greek letters, which
+        TeX sets upright while [math-auto] would italicize them. *)
+
 (** A MathML element. Character data is held unescaped and in UTF-8. The emitter
     is the only place that escapes it, so no caller can construct a node whose
     text escapes into markup. *)
 type node =
-  | Mi of string (** An identifier, italic by default. *)
+  | Mi of string * variant (** An identifier. *)
   | Mn of string (** A number. *)
   | Mo of string * stretch (** An operator, fence or separator. *)
   | Mtext of Types.font * string (** A literal run, where spaces are significant. *)

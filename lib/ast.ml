@@ -6,13 +6,17 @@ type space =
   | Quad
   | Qquad
 
+type variant =
+  | Italic
+  | Upright
+
 type stretch =
   | Default
   | Stretchy
   | Fixed
 
 type node =
-  | Mi of string
+  | Mi of string * variant
   | Mn of string
   | Mo of string * stretch
   | Mtext of Types.font * string
