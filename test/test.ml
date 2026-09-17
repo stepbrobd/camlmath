@@ -271,11 +271,11 @@ let test_unbraced_argument () =
 let test_aliases_and_escapes () =
   Alcotest.(check bool) "le" true (contains (conv "a \\le b") "&#x2264;");
   Alcotest.(check bool) "ne" true (contains (conv "a \\ne b") "&#x2260;");
-  Alcotest.(check bool) "percent" true (contains (conv "50\\%") "<mo>%</mo>");
+  Alcotest.(check bool) "percent" true (contains (conv "50\\%") "<mi>%</mi>");
   Alcotest.(check bool)
     "ampersand escaped"
     true
-    (contains (conv "a \\& b") "<mo>&amp;</mo>")
+    (contains (conv "a \\& b") "<mi>&amp;</mi>")
 ;;
 
 let test_commands_are_listed () =
@@ -366,6 +366,20 @@ let test_arrow_optional_argument_is_loud () =
     (err "\\xrightarrow[a]{b}")
 ;;
 
+(* tex sets these as ordinary atoms with no spacing, and an <mo> the operator
+   dictionary does not list takes 0.2777em on each side *)
+let test_ordinary_symbols_are_identifiers () =
+  Alcotest.(check bool)
+    "emptyset"
+    true
+    (contains (conv "A = \\emptyset") "<mo>=</mo><mi>&#x2205;</mi>");
+  Alcotest.(check bool)
+    "forall"
+    true
+    (contains (conv "\\forall x") "<mi>&#x2200;</mi><mi>x</mi>");
+  Alcotest.(check bool) "dollar" true (contains (conv "\\$5") "<mi>$</mi><mn>5</mn>")
+;;
+
 let case name f = Alcotest.test_case name `Quick f
 
 let () =
@@ -399,6 +413,7 @@ let () =
         ; case "aliases and escapes" test_aliases_and_escapes
         ; case "script argument" test_script_argument_is_one_token
         ; case "primes" test_primes
+        ; case "ordinary symbols" test_ordinary_symbols_are_identifiers
         ] )
     ; ( "failures"
       , [ case "unknown command" test_unknown_command_is_loud

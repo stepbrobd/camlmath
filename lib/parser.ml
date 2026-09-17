@@ -9,7 +9,6 @@ let symbols =
   [ "cup", Mo ("\u{222a}", Default)
   ; "cap", Mo ("\u{2229}", Default)
   ; "setminus", Mo ("\u{2216}", Default)
-  ; "emptyset", Mo ("\u{2205}", Default)
   ; "in", Mo ("\u{2208}", Default)
   ; "notin", Mo ("\u{2209}", Default)
   ; "subset", Mo ("\u{2282}", Default)
@@ -33,14 +32,18 @@ let symbols =
   ; "approx", Mo ("\u{2248}", Default)
   ; "land", Mo ("\u{2227}", Default)
   ; "lor", Mo ("\u{2228}", Default)
-  ; "lnot", Mo ("\u{00ac}", Default)
-  ; "forall", Mo ("\u{2200}", Default)
-  ; "exists", Mo ("\u{2203}", Default)
   ; "vdash", Mo ("\u{22a2}", Default)
   ; "models", Mo ("\u{22a8}", Default)
   ; "ldots", Mo ("\u{2026}", Default)
   ; "cdots", Mo ("\u{22ef}", Default)
+    (* ordinary symbols in tex, class ord, so identifiers rather than operators.
+       an <mo> the operator dictionary does not list takes 0.2777em on each
+       side, and math-auto has no italic form for any of these *)
   ; "infty", Mi ("\u{221e}", Italic)
+  ; "emptyset", Mi ("\u{2205}", Italic)
+  ; "lnot", Mi ("\u{00ac}", Italic)
+  ; "forall", Mi ("\u{2200}", Italic)
+  ; "exists", Mi ("\u{2203}", Italic)
     (* lowercase greek is italic in tex, which is also what math-auto gives a
        single character, so these carry no variant *)
   ; "alpha", Mi ("\u{03b1}", Italic)
@@ -89,12 +92,13 @@ let symbols =
   ; "vert", Mo ("|", Fixed)
   ; "|", Mo ("\u{2016}", Fixed)
   ; "Vert", Mo ("\u{2016}", Fixed)
-    (* the characters tex reserves, reachable in math mode only escaped *)
-  ; "%", Mo ("%", Default)
-  ; "&", Mo ("&", Default)
-  ; "#", Mo ("#", Default)
-  ; "$", Mo ("$", Default)
-  ; "_", Mo ("_", Default)
+    (* the characters tex reserves, reachable in math mode only escaped. class
+       ord as well, and as operators the percent sign would take a gap *)
+  ; "%", Mi ("%", Italic)
+  ; "&", Mi ("&", Italic)
+  ; "#", Mi ("#", Italic)
+  ; "$", Mi ("$", Italic)
+  ; "_", Mi ("_", Italic)
   ; ",", Mspace Thin
   ; ":", Mspace Medium
   ; ";", Mspace Thick
