@@ -2,7 +2,7 @@
 
     The lexer is a cursor over the source. Math mode and text mode are different
     languages, so they are different entry points: {!next} tokenizes math mode
-    and discards whitespace, while {!text_arg} reads a braced argument verbatim
+    and discards whitespace, while {!text_arg} reads a braced argument as text,
     because a space inside [\texttt{go f()}] is part of the content. *)
 
 type token =

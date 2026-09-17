@@ -17,7 +17,8 @@
 
     - no [mpadded] with negative metrics, which WebKit and Blink lay out
       differently;
-    - no [mathvariant], which MathML Core reduced to ["normal"] on [<mi>].
+    - no [mathvariant] beyond ["normal"] on [<mi>], the one value MathML Core
+      kept.
 
     Output is ASCII, so it can be pasted into a source file of any encoding, and
     it carries no named entity beyond the five XML defines, so an XML validity

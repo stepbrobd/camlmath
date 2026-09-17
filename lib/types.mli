@@ -28,7 +28,7 @@ type error =
   | Unexpected_token of string * int (** A token in a position that has no reading. *)
   | Unclosed_group of int (** A group opened at this offset and never closed. *)
   | Missing_argument of string * int
-  (** A command that requires a braced argument was not given one. *)
+  (** A command that requires an argument was not given one. *)
 
 (** Raised by the [_exn] entry points in place of returning an error. *)
 exception Camlmath_error of error
