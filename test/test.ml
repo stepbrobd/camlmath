@@ -412,6 +412,12 @@ let test_sign_after_relation_is_ordinary () =
     (conv ~display:Inline "-x")
 ;;
 
+let test_var_greek () =
+  Alcotest.(check bool) "varpi" true (contains (conv "\\varpi") "&#x3d6;");
+  Alcotest.(check bool) "varrho" true (contains (conv "\\varrho") "&#x3f1;");
+  Alcotest.(check bool) "varsigma" true (contains (conv "\\varsigma") "&#x3c2;")
+;;
+
 let case name f = Alcotest.test_case name `Quick f
 
 let () =
@@ -445,6 +451,7 @@ let () =
         ; case "aliases and escapes" test_aliases_and_escapes
         ; case "script argument" test_script_argument_is_one_token
         ; case "primes" test_primes
+        ; case "var greek" test_var_greek
         ; case "sign after relation" test_sign_after_relation_is_ordinary
         ; case "ordinary symbols" test_ordinary_symbols_are_identifiers
         ] )
