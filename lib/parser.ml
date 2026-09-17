@@ -166,13 +166,42 @@ let prime_glyph = function
   | n -> String.concat "" (List.init n (fun _ -> "\u{2032}"))
 ;;
 
+(* tex appendix g, rule 5: a binary operator after a relation, an opening
+   fence, punctuation or another binary operator is set as an ordinary atom
+   with no space around it, so x = -1 has no gap after the sign. mathml has no
+   atom classes, but an operator that is the first child of an mrow is prefix
+   with no space, so the sign and its operand are wrapped in one *)
+let is_sign = function
+  | "+" | "\u{2212}" | "\u{00b1}" -> true
+  | _ -> false
+;;
+
+(* the closing fences and the characters tex sets as ordinary atoms, after
+   which a sign keeps its binary spacing *)
+let keeps_binary = function
+  | ")" | "]" | "}" | "!" | "?" | "|" | "\u{2016}" | "." | "/" | "\u{2026}" | "\u{22ef}"
+    -> true
+  | _ -> false
+;;
+
+let rec after_operator = function
+  | Mspace _ :: rest -> after_operator rest
+  | Mo (s, _) :: _ -> not (keeps_binary s)
+  | _ -> false
+;;
+
 let rec parse_row lx =
   let rec loop acc =
     match Lexer.peek lx with
     | (Lexer.Rbrace | Lexer.Eof), _ -> Ok (List.rev acc)
     | _ ->
       let* item = parse_script lx in
-      loop (item :: acc)
+      (match item, Lexer.peek lx with
+       | Mo (s, Default), ((Lexer.Char _ | Lexer.Command _ | Lexer.Lbrace), _)
+         when is_sign s && after_operator acc ->
+         let* operand = parse_script lx in
+         loop (Mrow [ item; operand ] :: acc)
+       | _ -> loop (item :: acc))
   in
   loop []
 

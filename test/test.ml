@@ -380,6 +380,38 @@ let test_ordinary_symbols_are_identifiers () =
   Alcotest.(check bool) "dollar" true (contains (conv "\\$5") "<mi>$</mi><mn>5</mn>")
 ;;
 
+(* tex appendix g rule 5: a sign after a relation, an opening fence or
+   punctuation is an ordinary atom. wrapped with its operand it is the first
+   child of an mrow, which mathml core sets as prefix with no space *)
+let test_sign_after_relation_is_ordinary () =
+  Alcotest.(check bool)
+    "after equals"
+    true
+    (contains (conv "x = -1") "<mo>=</mo><mrow><mo>&#x2212;</mo><mn>1</mn></mrow>");
+  Alcotest.(check bool)
+    "after fence"
+    true
+    (contains
+       (conv "(-x)")
+       "<mo stretchy=\"false\">(</mo><mrow><mo>&#x2212;</mo><mi>x</mi></mrow><mo \
+        stretchy=\"false\">)</mo>");
+  Alcotest.(check bool)
+    "binary stays"
+    true
+    (contains (conv "a - b") "<mi>a</mi><mo>&#x2212;</mo><mi>b</mi>");
+  Alcotest.(check bool)
+    "after a closer stays"
+    true
+    (contains
+       (conv "f(x) - 1")
+       "<mo stretchy=\"false\">)</mo><mo>&#x2212;</mo><mn>1</mn>");
+  Alcotest.(check string)
+    "leading sign unchanged"
+    "<math \
+     xmlns=\"http://www.w3.org/1998/Math/MathML\"><mrow><mo>&#x2212;</mo><mi>x</mi></mrow></math>"
+    (conv ~display:Inline "-x")
+;;
+
 let case name f = Alcotest.test_case name `Quick f
 
 let () =
@@ -413,6 +445,7 @@ let () =
         ; case "aliases and escapes" test_aliases_and_escapes
         ; case "script argument" test_script_argument_is_one_token
         ; case "primes" test_primes
+        ; case "sign after relation" test_sign_after_relation_is_ordinary
         ; case "ordinary symbols" test_ordinary_symbols_are_identifiers
         ] )
     ; ( "failures"
