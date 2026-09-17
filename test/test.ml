@@ -427,6 +427,35 @@ let test_parser_validates () =
   | Ok _ -> Alcotest.fail "accepted a control character"
 ;;
 
+(* text mode reads the way tex reads it: braces group, \ is a space,
+   \textbackslash is the backslash, and \\ or \, are refused by name *)
+let test_text_mode_follows_tex () =
+  Alcotest.(check bool)
+    "braces group"
+    true
+    (contains (conv "\\text{a{b}c}") "<mtext>abc</mtext>");
+  Alcotest.(check bool)
+    "escaped braces stay"
+    true
+    (contains (conv "\\text{\\{a\\}}") "<mtext>{a}</mtext>");
+  Alcotest.(check bool)
+    "control space"
+    true
+    (contains (conv "\\text{a\\ b}") "<mtext>a&#xa0;b</mtext>");
+  Alcotest.(check bool)
+    "textbackslash"
+    true
+    (contains (conv "\\texttt{\\textbackslash n}") ">\\n</mtext>");
+  Alcotest.(check string)
+    "line break is outside the subset"
+    "unknown_command(\\\\ at 7)"
+    (err "\\text{a\\\\b}");
+  Alcotest.(check string)
+    "thin space is outside the subset"
+    "unknown_command(\\, at 7)"
+    (err "\\text{a\\,b}")
+;;
+
 let case name f = Alcotest.test_case name `Quick f
 
 let () =
@@ -460,6 +489,7 @@ let () =
         ; case "aliases and escapes" test_aliases_and_escapes
         ; case "script argument" test_script_argument_is_one_token
         ; case "primes" test_primes
+        ; case "text mode" test_text_mode_follows_tex
         ; case "var greek" test_var_greek
         ; case "sign after relation" test_sign_after_relation_is_ordinary
         ; case "ordinary symbols" test_ordinary_symbols_are_identifiers

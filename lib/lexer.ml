@@ -27,6 +27,13 @@ let rec skip_space t =
     skip_space t)
 ;;
 
+(* the utf-8 character starting at byte [i], whole, so that an error can name
+   it rather than its first byte *)
+let char_at src i =
+  let d = String.get_utf_8_uchar src i in
+  String.sub src i (min (Uchar.utf_decode_length d) (String.length src - i))
+;;
+
 let next t =
   skip_space t;
   let n = String.length t.src in
@@ -80,7 +87,9 @@ let peek t =
   tok
 ;;
 
-let escapable = [ '{'; '}'; '\\'; '$'; '%'; '&'; '#'; '_' ]
+(* the characters a backslash makes literal in text mode. \\ is a line break in
+   tex, not a backslash, so it is not among them *)
+let escapable = [ '{'; '}'; '$'; '%'; '&'; '#'; '_' ]
 
 let text_arg t ~cmd ~at =
   skip_space t;
@@ -96,23 +105,42 @@ let text_arg t ~cmd ~at =
     let err = ref None in
     while (not !closed) && !err = None && !i < n do
       match t.src.[!i] with
+      (* an unescaped brace groups, as in tex, and leaves no character *)
       | '{' ->
         incr depth;
-        Buffer.add_char buf '{';
         incr i
       | '}' ->
         decr depth;
-        if !depth = 0 then closed := true else Buffer.add_char buf '}';
+        if !depth = 0 then closed := true;
         incr i
       | '\\' when !i + 1 < n && List.mem t.src.[!i + 1] escapable ->
         Buffer.add_char buf t.src.[!i + 1];
+        i := !i + 2
+      | '\\' when !i + 1 < n && t.src.[!i + 1] = ' ' ->
+        (* the control space *)
+        Buffer.add_char buf ' ';
         i := !i + 2
       | '\\' ->
         let j = ref (!i + 1) in
         while !j < n && is_letter t.src.[!j] do
           incr j
         done;
-        err := Some (Unknown_command (String.sub t.src (!i + 1) (!j - !i - 1), !i))
+        if !j = !i + 1
+        then (
+          (* a control symbol outside the escapes above, named whole. a
+             backslash ending the source names nothing *)
+          let name = if !j < n then char_at t.src !j else "" in
+          err := Some (Unknown_command (name, !i)))
+        else (
+          match String.sub t.src (!i + 1) (!j - !i - 1) with
+          | "textbackslash" ->
+            Buffer.add_char buf '\\';
+            (* a control word swallows the spaces after it *)
+            i := !j;
+            while !i < n && is_space t.src.[!i] do
+              incr i
+            done
+          | name -> err := Some (Unknown_command (name, !i)))
       | c ->
         Buffer.add_char buf c;
         incr i

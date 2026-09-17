@@ -34,9 +34,11 @@ val mark : t -> int
 val reset : t -> int -> unit
 
 (** [text_arg t ~cmd ~at] reads the braced argument of [cmd], which starts at
-    [at], as text-mode content. Spaces are preserved, brace nesting is tracked,
-    and a backslash escapes one of the TeX special characters. Any other
-    control sequence inside text mode is an error rather than a silent drop. *)
+    [at], as text-mode content. Spaces are significant. An unescaped brace
+    groups and leaves no character, as it does in TeX. A backslash before one
+    of [{ } $ % & # _] makes it literal, [\ ] is a space and [\textbackslash]
+    a backslash. Any other control sequence inside text mode is an error that
+    names it, rather than a silent drop. *)
 val text_arg : t -> cmd:string -> at:int -> (string, Types.error) result
 
 (** [describe tok] names a token the way an error message shows it: the
