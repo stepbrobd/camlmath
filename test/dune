@@ -1,3 +1,4 @@
 (test
  (name test)
- (libraries camlmath alcotest))
+ (libraries camlmath alcotest)
+ (deps srd.mathml))

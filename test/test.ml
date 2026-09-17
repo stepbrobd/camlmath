@@ -295,6 +295,22 @@ let test_exn_entry_point () =
   Alcotest.(check bool) "raises" true raised
 ;;
 
+(* the exact markup ysun ships for pages/srd.md, one formula per line. a change
+   here changes the site's bytes, so the output is pinned rather than merely
+   checked for shape *)
+let test_srd_golden () =
+  let golden =
+    In_channel.with_open_bin "srd.mathml" In_channel.input_all
+    |> String.split_on_char '\n'
+    |> List.filter (fun line -> line <> "")
+  in
+  Alcotest.(check int) "one line per formula" (List.length srd) (List.length golden);
+  List.iter2
+    (fun (label, src) want -> Alcotest.(check string) label want (conv src))
+    srd
+    golden
+;;
+
 let case name f = Alcotest.test_case name `Quick f
 
 let () =
@@ -306,6 +322,7 @@ let () =
         ; case "ascii only" test_srd_ascii
         ; case "no mathvariant" test_no_mathvariant
         ; case "no mpadded" test_no_mpadded
+        ; case "golden" test_srd_golden
         ] )
     ; ( "emitter"
       , [ case "escapes < in text" test_texttt_escapes_lt
