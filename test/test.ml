@@ -471,6 +471,19 @@ let test_errors_name_characters () =
     (err "\\\nx")
 ;;
 
+(* tex sets : as a relation and \colon as punctuation. the operator dictionary
+   spaces the ascii colon as punctuation, so the relation is u+2236 *)
+let test_colon () =
+  Alcotest.(check bool)
+    "relation"
+    true
+    (contains (conv "e : \\tau") "<mi>e</mi><mo>&#x2236;</mo><mi>&#x3c4;</mi>");
+  Alcotest.(check bool)
+    "punctuation"
+    true
+    (contains (conv "f\\colon A \\to B") "<mi>f</mi><mo>:</mo><mi>A</mi>")
+;;
+
 let case name f = Alcotest.test_case name `Quick f
 
 let () =
@@ -504,6 +517,7 @@ let () =
         ; case "aliases and escapes" test_aliases_and_escapes
         ; case "script argument" test_script_argument_is_one_token
         ; case "primes" test_primes
+        ; case "colon" test_colon
         ; case "text mode" test_text_mode_follows_tex
         ; case "var greek" test_var_greek
         ; case "sign after relation" test_sign_after_relation_is_ordinary

@@ -95,6 +95,7 @@ let symbols =
   ; "vert", Mo ("|", Fixed)
   ; "|", Mo ("\u{2016}", Fixed)
   ; "Vert", Mo ("\u{2016}", Fixed)
+  ; "colon", Mo (":", Default)
     (* the characters tex reserves, reachable in math mode only escaped. class
        ord as well, and as operators the percent sign would take a gap *)
   ; "%", Mi ("%", Auto)
@@ -152,8 +153,12 @@ let char_atom lx c at =
     | '+' -> Ok (Mo ("+", Default))
     | '-' -> Ok (Mo ("\u{2212}", Default))
     | '*' -> Ok (Mo ("\u{2217}", Default))
-    | '=' | '<' | '>' | '/' | ',' | ';' | ':' | '!' | '?' | '.' ->
+    | '=' | '<' | '>' | '/' | ',' | ';' | '!' | '?' | '.' ->
       Ok (Mo (String.make 1 c, Default))
+    (* tex sets : as a relation and \colon as punctuation. the operator
+       dictionary spaces the ascii colon as punctuation, so the relation is the
+       ratio character, which it spaces as a binary operator *)
+    | ':' -> Ok (Mo ("\u{2236}", Default))
     (* a prime is a superscript on the atom before it, read by [attach]. one
        with nothing before it has no reading *)
     | '\'' -> Error (Unexpected_token ("'", at))
