@@ -1,5 +1,32 @@
 # Changelog
 
+## 2026.917.0
+
+- A script argument is one token, as TeX reads it, so `x^12` is x to the first
+  followed by a 2. `\frac`, the arrows, `_` and `^` share one argument reader.
+- `'` is a superscript prime, `f''` the double prime glyph, and a `^` right
+  after a prime joins the same superscript. It used to be a baseline `<mo>` that
+  the operator dictionary spaced as an unknown operator.
+- `\xrightarrow[a]{b}` is refused. The bracket used to become the label.
+- `\emptyset`, `\forall`, `\exists`, `\lnot` and the reserved characters are
+  identifiers. As operators outside the dictionary they took 0.2777em on each
+  side, where TeX gives an ordinary symbol none.
+- A sign after a relation, an opening fence or punctuation is wrapped with its
+  operand, so `x = -1` has no gap after the minus.
+- `:` is the relation U+2236, spaced as a binary operator rather than as
+  punctuation, and `\colon` is the punctuation colon.
+- Add `\varpi`, `\varrho` and `\varsigma`.
+- Text mode follows TeX: an unescaped brace groups and vanishes, `\` is a space,
+  `\textbackslash` a backslash, and `\\` is refused rather than read as a
+  backslash. An unknown control symbol is named in the error.
+- `Parser.parse` validates the source itself, so the public parser and emitter
+  cannot produce a character XML refuses.
+- `Unexpected_char` carries the character whole. An error names a character
+  outside printable ASCII by its code point.
+- `Ast.variant` is `Auto | Normal`. Its `Upright` shared a name with the text
+  font in `Types`.
+- The srd corpus output is pinned byte for byte in `test/srd.mathml`.
+
 ## 2026.903.1
 
 - Reject code points outside XML's `Char` production. Valid UTF-8 admits C0
