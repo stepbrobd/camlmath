@@ -7,8 +7,8 @@ type space =
   | Qquad
 
 type variant =
-  | Italic
-  | Upright
+  | Auto
+  | Normal
 
 type stretch =
   | Default

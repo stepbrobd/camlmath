@@ -12,7 +12,7 @@
       while Blink clamps it. Layout that needs padding uses {!Mspace}, which
       cannot express a negative metric.
     - The only [mathvariant] that exists is ["normal"] on [<mi>], which is the
-      only one MathML Core kept, spelled {!Upright}. A converter that emits
+      only one MathML Core kept, spelled {!Normal}. A converter that emits
       [mathvariant="monospace"] loses the face it asked for, so a monospace run
       is a {!Mtext} carrying {!Types.Monospace} and the emitter writes it as a
       font family. *)
@@ -35,13 +35,16 @@ type stretch =
   (** Forbid stretching. A fence beside a tall sibling, such as a parenthesis
         next to a fraction, would otherwise grow to match it. *)
 
-(** Whether a single-character identifier takes the automatic italic that
+(** Whether a single-character identifier is left to the automatic italic that
     MathML Core applies through [text-transform: math-auto]. *)
 type variant =
-  | Italic (** The default, and what TeX gives a variable. *)
-  | Upright
-  (** [mathvariant="normal"]. Needed for the uppercase Greek letters, which
-        TeX sets upright while [math-auto] would italicize them. *)
+  | Auto
+  (** No attribute. [math-auto] italicizes a letter, which is what TeX gives a
+        variable, and leaves a symbol such as the infinity sign alone. *)
+  | Normal
+  (** [mathvariant="normal"], which switches [math-auto] off. Needed for the
+        uppercase Greek letters, which TeX sets upright while [math-auto] would
+        italicize them. *)
 
 (** A MathML element. Character data is held unescaped and in UTF-8. The emitter
     is the only place that escapes it, so no caller can construct a node whose
