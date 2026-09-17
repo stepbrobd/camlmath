@@ -1,4 +1,4 @@
-(lang dune 3.21)
+(lang dune 3.23)
 
 (generate_opam_files true)
 (executables_implicit_empty_intf true)
@@ -6,8 +6,8 @@
 (name camlmath)
 (version 2026.917.0)
 (license MIT)
-(authors "Yifei Sun <ysun@hey.com>")
-(maintainers "Yifei Sun <ysun@hey.com>")
+(authors "Yifei Sun <ysun@duck.com>")
+(maintainers "Yifei Sun <ysun@duck.com>")
 
 (source
  (github stepbrobd/camlmath))
