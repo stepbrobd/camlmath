@@ -23,7 +23,8 @@ type error =
   | Unknown_command of string * int
   (** A control sequence outside the supported subset. The string omits the
         leading backslash. *)
-  | Unexpected_char of char * int (** A character with no meaning in math mode. *)
+  | Unexpected_char of string * int
+  (** A character with no meaning in math mode, whole and in UTF-8. *)
   | Unexpected_token of string * int (** A token in a position that has no reading. *)
   | Unclosed_group of int (** A group opened at this offset and never closed. *)
   | Missing_argument of string * int

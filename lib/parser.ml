@@ -157,7 +157,7 @@ let char_atom lx c at =
     (* a prime is a superscript on the atom before it, read by [attach]. one
        with nothing before it has no reading *)
     | '\'' -> Error (Unexpected_token ("'", at))
-    | _ -> Error (Unexpected_char (c, at)))
+    | _ -> Error (Unexpected_char (String.make 1 c, at)))
 ;;
 
 (* tex sets a run of primes as one glyph *)
@@ -290,6 +290,7 @@ and parse_atom lx =
   | Lexer.Lbrace -> braced lx at
   | Lexer.Char c -> char_atom lx c at
   | Lexer.Command name -> command lx name at
+  | Lexer.Other s -> Error (Unexpected_char (s, at))
   | tok -> Error (Unexpected_token (Lexer.describe tok, at))
 
 (* an unbraced argument is one token, so \frac12 is one half and x^12 is x to
@@ -301,6 +302,7 @@ and single lx =
   | Lexer.Char c when is_digit c -> Ok (Mn (String.make 1 c))
   | Lexer.Char c -> char_atom lx c at
   | Lexer.Command name -> command lx name at
+  | Lexer.Other s -> Error (Unexpected_char (s, at))
   | tok -> Error (Unexpected_token (Lexer.describe tok, at))
 
 and command lx name at =

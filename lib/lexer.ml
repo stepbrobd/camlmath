@@ -7,6 +7,7 @@ type token =
   | Sub
   | Sup
   | Char of char
+  | Other of string
   | Eof
 
 type t =
@@ -67,14 +68,20 @@ let next t =
         Command (String.sub t.src (at + 1) (!j - at - 1)), at)
       else if at + 1 < n
       then (
-        (* a control symbol is exactly one character, "\ " included *)
-        t.pos <- at + 2;
-        Command (String.make 1 t.src.[at + 1]), at)
+        (* a control symbol is exactly one character, "\ " included, and it is
+           taken whole so that an unknown one is named whole *)
+        let sym = char_at t.src (at + 1) in
+        t.pos <- at + 1 + String.length sym;
+        Command sym, at)
       else (
         (* a backslash ending the source names no command. it is reported as an
            unknown one by the parser rather than dropped *)
         t.pos <- n;
         Command "", at)
+    | c when Char.code c >= 0x80 ->
+      let s = char_at t.src at in
+      t.pos <- at + String.length s;
+      Other s, at
     | c ->
       t.pos <- at + 1;
       Char c, at)
@@ -162,6 +169,7 @@ let describe = function
   | Sub -> "_"
   | Sup -> "^"
   | Char c -> String.make 1 c
+  | Other s -> s
   | Eof -> "end of input"
 ;;
 

@@ -456,6 +456,21 @@ let test_text_mode_follows_tex () =
     (err "\\text{a\\,b}")
 ;;
 
+(* error strings stay ascii. a character outside the subset is named by its
+   code point rather than by its first byte *)
+let test_errors_name_characters () =
+  Alcotest.(check string) "typed alpha" "unexpected_char(U+03B1 at 2)" (err "x \206\177");
+  Alcotest.(check string) "ascii" "unexpected_char(~ at 1)" (err "a~b");
+  Alcotest.(check string)
+    "control symbol"
+    "unknown_command(\\U+03B1 at 0)"
+    (err "\\\206\177");
+  Alcotest.(check string)
+    "backslash newline"
+    "unknown_command(\\U+000A at 0)"
+    (err "\\\nx")
+;;
+
 let case name f = Alcotest.test_case name `Quick f
 
 let () =
@@ -505,6 +520,7 @@ let () =
         ; case "noncharacter" test_noncharacter_is_loud
         ; case "tab and newline pass" test_tab_and_newline_are_fine
         ; case "exception entry point" test_exn_entry_point
+        ; case "errors name characters" test_errors_name_characters
         ; case "parser validates" test_parser_validates
         ; case "arrow optional argument" test_arrow_optional_argument_is_loud
         ] )

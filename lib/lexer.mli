@@ -11,7 +11,10 @@ type token =
   | Rbrace
   | Sub (** [_] *)
   | Sup (** [^] *)
-  | Char of char
+  | Char of char (** One byte of ASCII. *)
+  | Other of string
+  (** A character above U+007F, whole and in UTF-8. Math mode has no reading
+        for it, so the parser refuses it by name. *)
   | Eof
 
 type t
