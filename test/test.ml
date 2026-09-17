@@ -357,6 +357,15 @@ let test_primes () =
   Alcotest.(check string) "nothing before it" "unexpected_token(' at 0)" (err "'x")
 ;;
 
+(* amsmath's \xrightarrow[below]{above} is outside the subset. it must not
+   become an arrow labelled with a bracket *)
+let test_arrow_optional_argument_is_loud () =
+  Alcotest.(check string)
+    "reported"
+    "unexpected_token([ at 12)"
+    (err "\\xrightarrow[a]{b}")
+;;
+
 let case name f = Alcotest.test_case name `Quick f
 
 let () =
@@ -402,6 +411,7 @@ let () =
         ; case "noncharacter" test_noncharacter_is_loud
         ; case "tab and newline pass" test_tab_and_newline_are_fine
         ; case "exception entry point" test_exn_entry_point
+        ; case "arrow optional argument" test_arrow_optional_argument_is_loud
         ] )
     ]
 ;;

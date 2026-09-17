@@ -292,8 +292,14 @@ and command lx name at =
    that instead shrinks the label box with a negative mpadded height leaves the
    ink outside the box, which webkit draws on top of the arrow *)
 and extensible lx cmd at glyph =
-  let* label = argument lx ~missing:(fun _ _ -> Missing_argument (cmd, at)) in
-  Ok (Mover (Mo (glyph, Stretchy), Mrow [ Mspace Thick; label; Mspace Thick ]))
+  match Lexer.peek lx with
+  (* amsmath's optional argument sets a second label under the arrow, which is
+     outside the subset. read as an unbraced argument it would become the label
+     itself, so it is refused rather than misread *)
+  | Lexer.Char '[', at -> Error (Unexpected_token ("[", at))
+  | _ ->
+    let* label = argument lx ~missing:(fun _ _ -> Missing_argument (cmd, at)) in
+    Ok (Mover (Mo (glyph, Stretchy), Mrow [ Mspace Thick; label; Mspace Thick ]))
 ;;
 
 let parse src =
