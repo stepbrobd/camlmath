@@ -7,7 +7,8 @@
     TeX is worse than one that stops. *)
 
 (** [parse src] converts one expression. [src] is the body of a math block, with
-    the surrounding [$$] already stripped. *)
+    the surrounding [$$] already stripped. The source goes through
+    {!Lexer.validate} first, so the tree holds nothing XML cannot carry. *)
 val parse : string -> (Ast.node, Types.error) result
 
 (** [commands] lists every control sequence the parser accepts, without the

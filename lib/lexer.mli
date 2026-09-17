@@ -43,3 +43,8 @@ val text_arg : t -> cmd:string -> at:int -> (string, Types.error) result
     character itself, the control sequence with its backslash, or
     ["end of input"]. *)
 val describe : token -> string
+
+(** [validate src] checks that [src] is well formed UTF-8 whose code points lie
+    in XML's [Char] production. {!Parser.parse} runs it before lexing, so every
+    string in the tree it builds can be emitted as it is. *)
+val validate : string -> (unit, Types.error) result

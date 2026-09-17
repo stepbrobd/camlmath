@@ -339,6 +339,7 @@ and extensible lx cmd at glyph =
 ;;
 
 let parse src =
+  let* () = Lexer.validate src in
   let lx = Lexer.make src in
   let* items = parse_row lx in
   match Lexer.next lx with

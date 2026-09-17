@@ -27,7 +27,7 @@ let add_chardata ~nbsp b s =
        | c -> Buffer.add_char b c);
       incr i)
     else (
-      (* validity is established once, at the entry point, so the decode here
+      (* validity is established once, by the parser, so the decode here
          cannot fail *)
       let d = String.get_utf_8_uchar s !i in
       Buffer.add_string

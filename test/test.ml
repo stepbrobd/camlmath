@@ -418,6 +418,15 @@ let test_var_greek () =
   Alcotest.(check bool) "varsigma" true (contains (conv "\\varsigma") "&#x3c2;")
 ;;
 
+(* the parser validates on its own, so a caller that stops at the tree or
+   emits markup itself cannot get a character xml refuses *)
+let test_parser_validates () =
+  match Parser.parse "\\text{a\001b}" with
+  | Error (Invalid_char 7) -> ()
+  | Error e -> Alcotest.failf "wrong error %a" pp_error e
+  | Ok _ -> Alcotest.fail "accepted a control character"
+;;
+
 let case name f = Alcotest.test_case name `Quick f
 
 let () =
@@ -466,6 +475,7 @@ let () =
         ; case "noncharacter" test_noncharacter_is_loud
         ; case "tab and newline pass" test_tab_and_newline_are_fine
         ; case "exception entry point" test_exn_entry_point
+        ; case "parser validates" test_parser_validates
         ; case "arrow optional argument" test_arrow_optional_argument_is_loud
         ] )
     ]

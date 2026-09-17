@@ -7,7 +7,11 @@
 
     Output is pure ASCII. A character above U+007F is written as a numeric
     reference, never as a named entity, because XML defines only five entity
-    names and a named reference outside them is a validity error. *)
+    names and a named reference outside them is a validity error.
+
+    The tree is expected to hold well formed UTF-8 within XML's character
+    range. {!Parser.parse} establishes that before building one, and a caller
+    assembling nodes by hand owes the same. *)
 
 (** [to_string ?display node] renders a complete [<math>] element. [display]
     defaults to {!Types.Block}. *)
