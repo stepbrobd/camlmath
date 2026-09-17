@@ -126,3 +126,13 @@ let text_arg t ~cmd ~at =
         Ok (Buffer.contents buf))
       else Error (Unclosed_group opened))
 ;;
+
+let describe = function
+  | Command name -> "\\" ^ name
+  | Lbrace -> "{"
+  | Rbrace -> "}"
+  | Sub -> "_"
+  | Sup -> "^"
+  | Char c -> String.make 1 c
+  | Eof -> "end of input"
+;;

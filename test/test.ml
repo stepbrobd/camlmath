@@ -311,6 +311,52 @@ let test_srd_golden () =
     golden
 ;;
 
+(* a script argument is one token, as tex reads it, so x^12 is x to the first
+   followed by a 2 and x^{12} is x to the twelfth *)
+let test_script_argument_is_one_token () =
+  Alcotest.(check bool)
+    "unbraced"
+    true
+    (contains (conv "x^12") "<msup><mi>x</mi><mn>1</mn></msup><mn>2</mn>");
+  Alcotest.(check bool)
+    "braced"
+    true
+    (contains (conv "x^{12}") "<msup><mi>x</mi><mn>12</mn></msup>");
+  Alcotest.(check bool)
+    "command"
+    true
+    (contains (conv "x^\\alpha") "<msup><mi>x</mi><mi>&#x3b1;</mi></msup>");
+  Alcotest.(check string)
+    "still loud when absent"
+    "unexpected_token(end of input at 2)"
+    (err "x^")
+;;
+
+(* tex sets f' as f^{\prime} and joins a following ^ into the same superscript *)
+let test_primes () =
+  Alcotest.(check bool)
+    "one"
+    true
+    (contains (conv "f'") "<msup><mi>f</mi><mo>&#x2032;</mo></msup>");
+  Alcotest.(check bool) "two" true (contains (conv "f''") "<mo>&#x2033;</mo>");
+  Alcotest.(check bool)
+    "prime then power"
+    true
+    (contains
+       (conv "f'^2")
+       "<msup><mi>f</mi><mrow><mo>&#x2032;</mo><mn>2</mn></mrow></msup>");
+  Alcotest.(check bool)
+    "prime then subscript"
+    true
+    (contains (conv "f'_i") "<msubsup><mi>f</mi><mi>i</mi><mo>&#x2032;</mo></msubsup>");
+  Alcotest.(check bool)
+    "subscript then prime"
+    true
+    (contains (conv "x_i'") "<msubsup><mi>x</mi><mi>i</mi><mo>&#x2032;</mo></msubsup>");
+  Alcotest.(check string) "double superscript" "unexpected_token(^ at 4)" (err "x'_i^2");
+  Alcotest.(check string) "nothing before it" "unexpected_token(' at 0)" (err "'x")
+;;
+
 let case name f = Alcotest.test_case name `Quick f
 
 let () =
@@ -342,6 +388,8 @@ let () =
         ; case "epsilon and phi" test_epsilon_and_phi_glyphs
         ; case "unbraced argument" test_unbraced_argument
         ; case "aliases and escapes" test_aliases_and_escapes
+        ; case "script argument" test_script_argument_is_one_token
+        ; case "primes" test_primes
         ] )
     ; ( "failures"
       , [ case "unknown command" test_unknown_command_is_loud

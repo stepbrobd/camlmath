@@ -38,3 +38,8 @@ val reset : t -> int -> unit
     and a backslash escapes one of the TeX special characters. Any other
     control sequence inside text mode is an error rather than a silent drop. *)
 val text_arg : t -> cmd:string -> at:int -> (string, Types.error) result
+
+(** [describe tok] names a token the way an error message shows it: the
+    character itself, the control sequence with its backslash, or
+    ["end of input"]. *)
+val describe : token -> string

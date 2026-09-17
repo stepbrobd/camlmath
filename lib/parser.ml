@@ -145,9 +145,21 @@ let char_atom lx c at =
     | '+' -> Ok (Mo ("+", Default))
     | '-' -> Ok (Mo ("\u{2212}", Default))
     | '*' -> Ok (Mo ("\u{2217}", Default))
-    | '=' | '<' | '>' | '/' | ',' | ';' | ':' | '!' | '?' | '.' | '\'' ->
+    | '=' | '<' | '>' | '/' | ',' | ';' | ':' | '!' | '?' | '.' ->
       Ok (Mo (String.make 1 c, Default))
+    (* a prime is a superscript on the atom before it, read by [attach]. one
+       with nothing before it has no reading *)
+    | '\'' -> Error (Unexpected_token ("'", at))
     | _ -> Error (Unexpected_char (c, at)))
+;;
+
+(* tex sets a run of primes as one glyph *)
+let prime_glyph = function
+  | 1 -> "\u{2032}"
+  | 2 -> "\u{2033}"
+  | 3 -> "\u{2034}"
+  | 4 -> "\u{2057}"
+  | n -> String.concat "" (List.init n (fun _ -> "\u{2032}"))
 ;;
 
 let rec parse_row lx =
@@ -164,73 +176,103 @@ and parse_script lx =
   let* base = parse_atom lx in
   attach lx base
 
+(* scripts in either order, at most one of each. a superscript may also come
+   from a run of primes, so x_i' and x'^2_i read the way tex reads them *)
 and attach lx base =
+  let* sub = subscript lx in
+  let* sup = superscript lx in
+  let* sub =
+    match sub with
+    | Some _ -> Ok sub
+    | None -> subscript lx
+  in
+  Ok
+    (match sub, sup with
+     | None, None -> base
+     | Some sub, None -> Msub (base, sub)
+     | None, Some sup -> Msup (base, sup)
+     | Some sub, Some sup -> Msubsup (base, sub, sup))
+
+and subscript lx =
   match Lexer.peek lx with
   | Lexer.Sub, _ ->
     ignore (Lexer.next lx);
-    let* sub = parse_atom lx in
+    let* arg = script_arg lx in
+    Ok (Some arg)
+  | _ -> Ok None
+
+(* a ^ right after a run of primes joins the same superscript, which is what
+   tex's prime macro does so that f'^2 is f^{\prime 2} *)
+and superscript lx =
+  match primes lx 0 with
+  | 0 ->
     (match Lexer.peek lx with
      | Lexer.Sup, _ ->
        ignore (Lexer.next lx);
-       let* sup = parse_atom lx in
-       Ok (Msubsup (base, sub, sup))
-     | _ -> Ok (Msub (base, sub)))
-  | Lexer.Sup, _ ->
-    ignore (Lexer.next lx);
-    let* sup = parse_atom lx in
+       let* arg = script_arg lx in
+       Ok (Some arg)
+     | _ -> Ok None)
+  | n ->
+    let prime = Mo (prime_glyph n, Default) in
     (match Lexer.peek lx with
-     | Lexer.Sub, _ ->
+     | Lexer.Sup, _ ->
        ignore (Lexer.next lx);
-       let* sub = parse_atom lx in
-       Ok (Msubsup (base, sub, sup))
-     | _ -> Ok (Msup (base, sup)))
-  | _ -> Ok base
+       let* arg = script_arg lx in
+       Ok (Some (Mrow [ prime; arg ]))
+     | _ -> Ok (Some prime))
+
+and primes lx n =
+  match Lexer.peek lx with
+  | Lexer.Char '\'', _ ->
+    ignore (Lexer.next lx);
+    primes lx (n + 1)
+  | _ -> n
+
+and script_arg lx = argument lx ~missing:(fun tok at -> Unexpected_token (tok, at))
+
+(* an argument is a braced row or one token, the rule tex applies to \frac, to
+   the extensible arrows and to _ and ^ alike. [missing] builds the error when
+   the input or the enclosing group ends instead *)
+and argument lx ~missing =
+  match Lexer.peek lx with
+  | Lexer.Lbrace, opened ->
+    ignore (Lexer.next lx);
+    braced lx opened
+  | ((Lexer.Eof | Lexer.Rbrace) as tok), at -> Error (missing (Lexer.describe tok) at)
+  | _ -> single lx
+
+(* the row after an opening brace already consumed, through its closing brace *)
+and braced lx opened =
+  let* items = parse_row lx in
+  match Lexer.next lx with
+  | Lexer.Rbrace, _ -> Ok (row items)
+  | _ -> Error (Unclosed_group opened)
 
 and parse_atom lx =
   let tok, at = Lexer.next lx in
   match tok with
-  | Lexer.Lbrace ->
-    let* items = parse_row lx in
-    (match Lexer.next lx with
-     | Lexer.Rbrace, _ -> Ok (row items)
-     | _ -> Error (Unclosed_group at))
-  | Lexer.Rbrace -> Error (Unexpected_token ("}", at))
-  | Lexer.Sub -> Error (Unexpected_token ("_", at))
-  | Lexer.Sup -> Error (Unexpected_token ("^", at))
-  | Lexer.Eof -> Error (Unexpected_token ("end of input", at))
+  | Lexer.Lbrace -> braced lx at
   | Lexer.Char c -> char_atom lx c at
   | Lexer.Command name -> command lx name at
+  | tok -> Error (Unexpected_token (Lexer.describe tok, at))
 
-and group lx ~cmd ~at =
-  match Lexer.peek lx with
-  | Lexer.Lbrace, opened ->
-    ignore (Lexer.next lx);
-    let* items = parse_row lx in
-    (match Lexer.next lx with
-     | Lexer.Rbrace, _ -> Ok (row items)
-     | _ -> Error (Unclosed_group opened))
-  | (Lexer.Eof | Lexer.Rbrace), _ -> Error (Missing_argument (cmd, at))
-  | _ -> single lx
-
-(* an unbraced argument is one token, so \frac12 is one half. a digit must not
-   pull in the digits after it the way an ordinary atom does *)
+(* an unbraced argument is one token, so \frac12 is one half and x^12 is x to
+   the first followed by a 2. a digit must not pull in the digits after it the
+   way an ordinary atom does *)
 and single lx =
   let tok, at = Lexer.next lx in
   match tok with
   | Lexer.Char c when is_digit c -> Ok (Mn (String.make 1 c))
   | Lexer.Char c -> char_atom lx c at
   | Lexer.Command name -> command lx name at
-  | Lexer.Lbrace -> Error (Unexpected_token ("{", at))
-  | Lexer.Rbrace -> Error (Unexpected_token ("}", at))
-  | Lexer.Sub -> Error (Unexpected_token ("_", at))
-  | Lexer.Sup -> Error (Unexpected_token ("^", at))
-  | Lexer.Eof -> Error (Unexpected_token ("end of input", at))
+  | tok -> Error (Unexpected_token (Lexer.describe tok, at))
 
 and command lx name at =
+  let arg () = argument lx ~missing:(fun _ _ -> Missing_argument (name, at)) in
   match name with
   | "frac" ->
-    let* num = group lx ~cmd:name ~at in
-    let* den = group lx ~cmd:name ~at in
+    let* num = arg () in
+    let* den = arg () in
     Ok (Mfrac (num, den))
   | "xrightarrow" -> extensible lx name at "\u{2192}"
   | "xleftarrow" -> extensible lx name at "\u{2190}"
@@ -250,7 +292,7 @@ and command lx name at =
    that instead shrinks the label box with a negative mpadded height leaves the
    ink outside the box, which webkit draws on top of the arrow *)
 and extensible lx cmd at glyph =
-  let* label = group lx ~cmd ~at in
+  let* label = argument lx ~missing:(fun _ _ -> Missing_argument (cmd, at)) in
   Ok (Mover (Mo (glyph, Stretchy), Mrow [ Mspace Thick; label; Mspace Thick ]))
 ;;
 
@@ -259,6 +301,5 @@ let parse src =
   let* items = parse_row lx in
   match Lexer.next lx with
   | Lexer.Eof, _ -> Ok (row items)
-  | Lexer.Rbrace, at -> Error (Unexpected_token ("}", at))
-  | _, at -> Error (Unexpected_token ("token", at))
+  | tok, at -> Error (Unexpected_token (Lexer.describe tok, at))
 ;;
