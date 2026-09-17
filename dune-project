@@ -4,7 +4,7 @@
 (executables_implicit_empty_intf true)
 
 (name camlmath)
-(version 2026.903.1)
+(version 2026.917.0)
 (license MIT)
 (authors "Yifei Sun <ysun@hey.com>")
 (maintainers "Yifei Sun <ysun@hey.com>")
