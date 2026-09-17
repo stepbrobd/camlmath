@@ -17,6 +17,7 @@ buildDunePackage {
       ./lib
       ./test
       ./dune-project
+      ./camlmath.opam
     ];
   };
 
